@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import gevent.monkey
+gevent.monkey.patch_all()
+import gevent
+from gevent.queue import Queue, Empty
+from gevent.lock import BoundedSemaphore
+
 import os
 from dotenv import load_dotenv
 
@@ -7,9 +13,10 @@ BASE_PATH = os.path.dirname(os.path.realpath(__file__))
 DOTENV_PATH = os.path.join(BASE_PATH, '.env')
 load_dotenv(DOTENV_PATH)
 
-import logging, time
-import unittest, json
-import csv, math
+import logging
+import unittest
+import re
+import psycopg2
 from datetime import datetime
 from io import StringIO
 import requests
@@ -19,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = '/var/log/app'
+        logger_path = './'
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
@@ -27,9 +34,14 @@ class TestSite(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
+        self.worker_number = 10
+        self.worker_timeout = 30
+        self.queue_size = 100
+        self.tasks = Queue(maxsize=self.queue_size)
+        self.semaphore = BoundedSemaphore(1)
+
         self.base_path = 'https://www.fc-moto.de/epages/fcm.sf/ru_RU/'
         self.category_url = 'https://www.fc-moto.de/ru/Mototsikl/Mototsiklitnaya-odizhda/Mototsiklitnyrui-kurtki/Kozhanyrui-mototsiklitnyrui-kurtki'
-        self.write_filename = 'output.csv'
 
     def get_selector_root(self, url):
         response = requests.get(url)
@@ -44,8 +56,48 @@ class TestSite(unittest.TestCase):
         root = html.fromstring(response.text)
         return root
 
-    def get_category_max_page(self, category_url):
-        total_start = datetime.now() # 0
+    def get_category_meta(self, category_url):
+        last_page = 0
+        page_url = ''
+        categories = []
+
+        try:
+            response = requests.get(category_url)
+            response.encoding = 'utf-8'
+            stream = StringIO(response.text)
+            root_selector = html.parse(stream).getroot()
+            root_xpath = html.fromstring(response.text)
+
+            # last_page
+            page_selector = 'li > a[rel="next"]'
+            pages = root_selector.cssselect(page_selector)
+            texts = [page.text for page in pages]
+            if len(texts) > 0:
+                last_page = texts[-2]
+            else:
+                last_page = 0
+
+            page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" or text()!="..."]'
+            hrefs = [page.get('href', '') for page in pages]
+            if len(hrefs):
+                href = hrefs[0]
+                regexp = r'^(?P<page_url>.*Page=)(?P<page_id>\d+)$'
+                search = re.search(regexp, href, re.I | re.U)
+                page_id = search.group('page_id')
+                page_url = search.group('page_url')
+
+            categories = root_selector.cssselect('span[itemprop="itemListElement"] span[itemprop="name"]')
+            categories = [category.text for category in categories][1:]
+        except Exception as e:
+            self.logger.exception(str(e))
+
+        return (
+            int(last_page),
+            '{base_path}{page_url}'.format(base_path=self.base_path, page_url=page_url),
+            categories
+        )
+
+    def get_category_last_page(self, category_url):
         end_page_id = -1
 
         try:
@@ -62,17 +114,25 @@ class TestSite(unittest.TestCase):
 
         return int(end_page_id)
 
-    def get_product_links_by_page(self, page_url):
-        links = []
+    def get_pagination_url(self, category_url):
+        page_url = None
 
         try:
-            root = self.get_selector_root(page_url)
-            links = root.cssselect('.InfoArea .Headline a[itemprop="url"]')
-            links = ['{base_path}{link}'.format(base_path=self.base_path, link=link.get('href', '')) for link in links]
+            page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" or text()!="..."]'
+
+            root = self.get_xpath_root(category_url)
+            pages = [page.get('href', '') for page in root.xpath(page_xpath)]
+
+            if len(pages):
+                page = pages[0]
+                regexp = r'^(?P<page_url>.*Page=)(?P<page_id>\d+)$'
+                search = re.search(regexp, page, re.I | re.U)
+                page_id = search.group('page_id')
+                page_url = search.group('page_url')
         except Exception as e:
             self.logger.exception(str(e))
 
-        return list(set(links))
+        return page_url
 
     def get_category_names(self, category_url):
         categories = []
@@ -85,6 +145,19 @@ class TestSite(unittest.TestCase):
             self.logger.exception(str(e))
 
         return categories
+
+
+    def get_product_links_by_page(self, page_url):
+        links = []
+
+        try:
+            root = self.get_selector_root(page_url)
+            links = root.cssselect('.InfoArea .Headline a[itemprop="url"]')
+            links = ['{base_path}{link}'.format(base_path=self.base_path, link=link.get('href', '')) for link in links]
+        except Exception as e:
+            self.logger.exception(str(e))
+
+        return list(set(links))
 
     def get_pagination_links(self, category_url):
         # TODO: not optimal, run url getter with retriving page
@@ -113,12 +186,26 @@ class TestSite(unittest.TestCase):
 
         return len(list(set(summary_pages)))
 
-    # def test_max_page(self):
-    #     max_page = self.get_category_max_page(self.category_url)
+    def worker(self, n):
+        try:
+            while True:
+                page_id = self.tasks.get(timeout=self.worker_timeout)
+                page = '{page_url}{page_id}'.format(page_url=self.page_url, page_id=page_id)
+                print(page_id, len(self.get_product_links_by_page(page)))
+        except Empty:
+            print('Worker #{} exited!'.format(n))
 
-    def test_pagination_links(self):
-        pagination_links = self.get_pagination_links(self.category_url)
-        self.logger.info(pagination_links)
+    def main(self):
+        self.last_page, self.page_url, self.categories = self.get_category_meta(self.category_url)
+        for page_id in range(1, self.last_page + 1):
+            self.tasks.put(page_id)
+
+    def test_loop(self):
+        while(True):
+            gevent.joinall([
+                gevent.spawn(self.main),
+                *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
+            ])
 
 if __name__ == '__main__':
     unittest.main()
