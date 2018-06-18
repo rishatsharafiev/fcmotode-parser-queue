@@ -26,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = '/var/log'
+        logger_path = './'
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
@@ -42,6 +42,12 @@ class TestSite(unittest.TestCase):
 
         self.base_path = 'https://www.fc-moto.de/epages/fcm.sf/ru_RU/'
         self.category_url = 'https://www.fc-moto.de/ru/Mototsikl/Mototsiklitnaya-odizhda/Mototsiklitnyrui-kurtki/Kozhanyrui-mototsiklitnyrui-kurtki'
+
+        self.POSTGRES_DB = os.getenv('POSTGRES_DB', '')
+        self.POSTGRES_USER = os.getenv('POSTGRES_USER', '')
+        self.POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '')
+        self.POSTGRES_HOST = os.getenv('POSTGRES_HOST', '')
+        self.POSTGRES_PORT = os.getenv('POSTGRES_PORT', 5432)
 
     def get_selector_root(self, url):
         response = requests.get(url)
@@ -75,7 +81,7 @@ class TestSite(unittest.TestCase):
             if len(texts) > 0:
                 last_page = texts[-2]
             else:
-                last_page = 0
+                last_page = 1
 
             page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" or text()!="..."]'
             hrefs = [page.get('href', '') for page in pages]
@@ -84,16 +90,18 @@ class TestSite(unittest.TestCase):
                 regexp = r'^(?P<page_url>.*Page=)(?P<page_id>\d+)$'
                 search = re.search(regexp, href, re.I | re.U)
                 page_id = search.group('page_id')
-                page_url = search.group('page_url')
+                page_url = '{base_path}{page_url}'.format(base_path=self.base_path, page_url=search.group('page_url'))
+            else:
+                page_url = category_url
 
             categories = root_selector.cssselect('span[itemprop="itemListElement"] span[itemprop="name"]')
-            categories = [category.text for category in categories][1:]
+            categories = [category.text for category in categories if category.text != None][1:]
         except Exception as e:
             self.logger.exception(str(e))
 
         return (
             int(last_page),
-            '{base_path}{page_url}'.format(base_path=self.base_path, page_url=page_url),
+            page_url,
             categories
         )
 
@@ -195,17 +203,32 @@ class TestSite(unittest.TestCase):
         except Empty:
             print('Worker #{} exited!'.format(n))
 
-    def main(self):
-        self.last_page, self.page_url, self.categories = self.get_category_meta(self.category_url)
+    def main(self, category_url):
+        self.last_page, self.page_url, self.categories = self.get_category_meta(category_url)
         for page_id in range(1, self.last_page + 1):
             self.tasks.put(page_id)
 
+    def run_category_queue(self):
+        with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
+            with connection.cursor() as cursor:
+                sql_string = """
+                    SELECT
+                        "url"
+                    FROM "category_queue"
+                    WHERE "is_done" = FALSE
+                    ORDER BY "priority" DESC;
+                """
+                cursor.execute(sql_string)
+                for row in cursor.fetchall():
+                    category_url = row[0]
+                    gevent.joinall([
+                        gevent.spawn(self.main, category_url),
+                        *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
+                    ])
+
     def test_loop(self):
         while(True):
-            gevent.joinall([
-                gevent.spawn(self.main),
-                *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
-            ])
+            self.run_category_queue()
 
 if __name__ == '__main__':
     unittest.main()
