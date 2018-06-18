@@ -26,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = './'
+        logger_path = '/var/log'
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
