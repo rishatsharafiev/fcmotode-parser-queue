@@ -9,13 +9,14 @@ export PAGE_SUPERUSER_PORT=9002
 export PRODUCT_TAG=latest
 export PRODUCT_SUPERUSER_PORT=9003
 
-export POSTGRES_DB=default
-export POSTGRES_USER=default
-export POSTGRES_PASSWORD=secret
-export POSTGRES_PORT=54321
+export POSTGRES_DB=fcmoto
+export POSTGRES_USER=fcmoto
+export POSTGRES_PASSWORD=fcmoto
+export POSTGRES_HOST=fcmoto_postgres
+export POSTGRES_PORT=5432
 
 export ADMINER_PORT=8080
 
-export PORTAINER_PORT=9000
+export PORTAINER_PORT=8000
 
 export CADVISOR_PORT=8888

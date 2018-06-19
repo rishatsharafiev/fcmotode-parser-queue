@@ -26,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = '/var/log'
+        logger_path = './'
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
@@ -66,7 +66,7 @@ class TestSite(unittest.TestCase):
 
         try:
             root = self.get_selector_root(page_url)
-            links = root.cssselect('.InfoArea .Headline a[itemprop="url"]')
+            links = root.cssselect('.CategoryList .InfoArea .Headline a[itemprop="url"]')
             links = ['{base_path}{link}'.format(base_path=self.base_path, link=link.get('href', '')) for link in links]
         except Exception as e:
             self.logger.exception(str(e))
@@ -85,7 +85,7 @@ class TestSite(unittest.TestCase):
                         buffered_values = []
                         for link in links:
                             buffered_values.append("({category_id}, '{url}')".format(category_id=pk, url=link))
-                            if counter % 1000 == 0 or len(links) == counter:
+                            if counter % 100 == 0 or len(links) == counter:
                                 values = ", ".join(buffered_values)
                                 sql_string = """
                                     INSERT INTO
@@ -106,11 +106,11 @@ class TestSite(unittest.TestCase):
             with connection.cursor() as cursor:
                 sql_string = """
                     SELECT
-                        "page_url",
+                        "url",
                         "last_page",
                         "id"
                     FROM "category"
-                    WHERE "is_done" = FALSE
+                    WHERE "is_done" = FALSE OR "updated_at" IS NULL
                     ORDER BY "priority" DESC;
                 """
                 cursor.execute(sql_string)

@@ -118,7 +118,7 @@ class TestSite(unittest.TestCase):
                                 SET
                                     "updated_at" = NOW(),
                                     "title" = %s,
-                                    "page_url" = %s,
+                                    "url" = %s,
                                     "last_page" = %s
                                 WHERE
                                     "id" = %s
