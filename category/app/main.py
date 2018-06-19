@@ -34,14 +34,13 @@ class TestSite(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
-        self.worker_number = 10
-        self.worker_timeout = 30
+        self.worker_number = 5
+        self.worker_timeout = 20
         self.queue_size = 100
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
 
         self.base_path = 'https://www.fc-moto.de/epages/fcm.sf/ru_RU/'
-        self.category_url = 'https://www.fc-moto.de/ru/Mototsikl/Mototsiklitnaya-odizhda/Mototsiklitnyrui-kurtki/Kozhanyrui-mototsiklitnyrui-kurtki'
 
         self.POSTGRES_DB = os.getenv('POSTGRES_DB', '')
         self.POSTGRES_USER = os.getenv('POSTGRES_USER', '')
@@ -105,126 +104,52 @@ class TestSite(unittest.TestCase):
             categories
         )
 
-    def get_category_last_page(self, category_url):
-        end_page_id = -1
-
-        try:
-            root = self.get_selector_root(category_url)
-            pages = root.cssselect('li > a[rel="next"]')
-            pages = [page.text for page in pages]
-
-            if len(pages) > 0:
-                end_page_id = pages[-2]
-            else:
-                end_page_id = 0
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        return int(end_page_id)
-
-    def get_pagination_url(self, category_url):
-        page_url = None
-
-        try:
-            page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" or text()!="..."]'
-
-            root = self.get_xpath_root(category_url)
-            pages = [page.get('href', '') for page in root.xpath(page_xpath)]
-
-            if len(pages):
-                page = pages[0]
-                regexp = r'^(?P<page_url>.*Page=)(?P<page_id>\d+)$'
-                search = re.search(regexp, page, re.I | re.U)
-                page_id = search.group('page_id')
-                page_url = search.group('page_url')
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        return page_url
-
-    def get_category_names(self, category_url):
-        categories = []
-        try:
-            root = self.get_selector_root(category_url)
-            categories = root.cssselect('span[itemprop="itemListElement"] span[itemprop="name"]')
-            categories = [category.text for category in categories][1:]
-
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        return categories
-
-
-    def get_product_links_by_page(self, page_url):
-        links = []
-
-        try:
-            root = self.get_selector_root(page_url)
-            links = root.cssselect('.InfoArea .Headline a[itemprop="url"]')
-            links = ['{base_path}{link}'.format(base_path=self.base_path, link=link.get('href', '')) for link in links]
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        return list(set(links))
-
-    def get_pagination_links(self, category_url):
-        # TODO: not optimal, run url getter with retriving page
-        summary_pages = []
-        try:
-            page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" or text()!="..."]'
-            next_page_xpath = '//*[@id="CategoryProducts"]/descendant::li/a[@rel="next" and text()="..."]'
-
-            root = self.get_xpath_root(category_url)
-            pages = [page.get('href', '') for page in root.xpath(page_xpath)]
-            summary_pages.extend(pages)
-            next_pages = root.xpath(next_page_xpath)
-
-            while(next_pages):
-                if next_pages:
-                    next_page_url = '{base_path}{link}'.format(base_path=self.base_path, link=next_pages[0].get('href', ''))
-                    # print(next_pages[0].get('href', ''))
-                    # print(next_page_url)
-                    root = self.get_xpath_root(next_page_url)
-                    pages = [page.get('href', '') for page in root.xpath(page_xpath)]
-                    next_pages = root.xpath(next_page_xpath)
-                    summary_pages.extend(pages)
-
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        return len(list(set(summary_pages)))
-
     def worker(self, n):
         try:
             while True:
-                page_id = self.tasks.get(timeout=self.worker_timeout)
-                page = '{page_url}{page_id}'.format(page_url=self.page_url, page_id=page_id)
-                print(page_id, len(self.get_product_links_by_page(page)))
+                category_url, pk = self.tasks.get(timeout=self.worker_timeout)
+                last_page, page_url, categories = self.get_category_meta(category_url)
+                title = ",".join([category for category in categories if category != None])
+                with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
+                    with connection.cursor() as cursor:
+                        sql_string = """
+                            UPDATE
+                                "category" SET
+                                "is_done" = TRUE,
+                                "updated_at" = NOW(),
+                                "title" = %s,
+                                "page_url" = %s
+                            WHERE
+                                "id" = %s
+                            RETURNING id;
+                        """
+                        parameters = (title, page_url, pk)
+                        cursor.execute(sql_string, parameters)
         except Empty:
             print('Worker #{} exited!'.format(n))
 
-    def main(self, category_url):
-        self.last_page, self.page_url, self.categories = self.get_category_meta(category_url)
-        for page_id in range(1, self.last_page + 1):
-            self.tasks.put(page_id)
-
-    def run_category_queue(self):
+    def main(self):
         with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
             with connection.cursor() as cursor:
                 sql_string = """
                     SELECT
-                        "url"
-                    FROM "category_queue"
+                        "url",
+                        "id"
+                    FROM "category"
                     WHERE "is_done" = FALSE
                     ORDER BY "priority" DESC;
                 """
                 cursor.execute(sql_string)
                 for row in cursor.fetchall():
                     category_url = row[0]
-                    gevent.joinall([
-                        gevent.spawn(self.main, category_url),
-                        *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
-                    ])
+                    pk = row[1]
+                    self.tasks.put((category_url, pk))
+
+    def run_category_queue(self):
+        gevent.joinall([
+            gevent.spawn(self.main),
+            *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
+        ])
 
     def test_loop(self):
         while(True):
