@@ -112,19 +112,21 @@ class TestSite(unittest.TestCase):
                 title = ",".join([category for category in categories if category != None])
                 with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
                     with connection.cursor() as cursor:
-                        sql_string = """
-                            UPDATE
-                                "category" SET
-                                "is_done" = TRUE,
-                                "updated_at" = NOW(),
-                                "title" = %s,
-                                "page_url" = %s
-                            WHERE
-                                "id" = %s
-                            RETURNING id;
-                        """
-                        parameters = (title, page_url, pk)
-                        cursor.execute(sql_string, parameters)
+                        if last_page and page_url and categories:
+                            sql_string = """
+                                UPDATE
+                                    "category" SET
+                                    "is_done" = TRUE,
+                                    "updated_at" = NOW(),
+                                    "title" = %s,
+                                    "page_url" = %s
+                                WHERE
+                                    "id" = %s
+                                RETURNING id;
+                            """
+                            parameters = (title, page_url, pk)
+                            cursor.execute(sql_string, parameters)
+
         except Empty:
             print('Worker #{} exited!'.format(n))
 
