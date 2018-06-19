@@ -1,11 +1,21 @@
 export VOLUMES_DRIVER=local
+
 export CATEGORY_TAG=latest
 export CATEGORY_SUPERUSER_PORT=9001
+
+export PAGE_TAG=latest
+export PAGE_SUPERUSER_PORT=9002
+
+export PRODUCT_TAG=latest
+export PRODUCT_SUPERUSER_PORT=9003
 
 export POSTGRES_DB=default
 export POSTGRES_USER=default
 export POSTGRES_PASSWORD=secret
 export POSTGRES_PORT=54321
 
+export ADMINER_PORT=8080
+
 export PORTAINER_PORT=9000
-export CADVISOR_PORT=8888export 
+
+export CADVISOR_PORT=8888

@@ -114,8 +114,8 @@ class TestSite(unittest.TestCase):
                     with connection.cursor() as cursor:
                         if last_page and page_url and categories:
                             sql_string = """
-                                UPDATE
-                                    "category" SET
+                                UPDATE "category"
+                                SET
                                     "updated_at" = NOW(),
                                     "title" = %s,
                                     "page_url" = %s,
