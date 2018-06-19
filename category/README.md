@@ -13,5 +13,5 @@ docker push fcmotode/category:latest
 
 ### Run image
 ```
-docker run -p 9001:9001 -v $(pwd)/app:/app -v $(pwd)/log:/var/log/supervisor -v $(pwd)/log:/var/log/app fcmotode/category:latest
+docker run -p 9001:9001 -v $(pwd)/app:/app -v /var/log:/var/log/supervisor -v /var/log:/var/log/app fcmotode/category:latest
 ```

@@ -26,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = './'
+        logger_path = '/var/log'
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
@@ -35,7 +35,7 @@ class TestSite(unittest.TestCase):
         self.logger.propagate = False
 
         self.worker_number = 5
-        self.worker_timeout = 10
+        self.worker_timeout = 15
         self.queue_size = 100
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
@@ -116,7 +116,6 @@ class TestSite(unittest.TestCase):
                             sql_string = """
                                 UPDATE
                                     "category" SET
-                                    "is_done" = TRUE,
                                     "updated_at" = NOW(),
                                     "title" = %s,
                                     "page_url" = %s,
@@ -139,7 +138,7 @@ class TestSite(unittest.TestCase):
                         "url",
                         "id"
                     FROM "category"
-                    WHERE "is_done" = FALSE
+                    WHERE "is_done" = FALSE OR "updated_at" IS NULL
                     ORDER BY "priority" DESC;
                 """
                 cursor.execute(sql_string)
@@ -148,7 +147,7 @@ class TestSite(unittest.TestCase):
                     pk = row[1]
                     self.tasks.put((category_url, pk))
 
-    def run_category_queue(self):
+    def run_parallel(self):
         gevent.joinall([
             gevent.spawn(self.main),
             *[gevent.spawn(self.worker, n) for n in range(self.worker_number)],
@@ -156,7 +155,7 @@ class TestSite(unittest.TestCase):
 
     def test_loop(self):
         while(True):
-            self.run_category_queue()
+            self.run_parallel()
 
 if __name__ == '__main__':
     unittest.main()
