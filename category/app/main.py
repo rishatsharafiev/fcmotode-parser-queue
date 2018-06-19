@@ -35,7 +35,7 @@ class TestSite(unittest.TestCase):
         self.logger.propagate = False
 
         self.worker_number = 5
-        self.worker_timeout = 20
+        self.worker_timeout = 10
         self.queue_size = 100
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
@@ -119,12 +119,13 @@ class TestSite(unittest.TestCase):
                                     "is_done" = TRUE,
                                     "updated_at" = NOW(),
                                     "title" = %s,
-                                    "page_url" = %s
+                                    "page_url" = %s,
+                                    "last_page" = %s
                                 WHERE
                                     "id" = %s
                                 RETURNING id;
                             """
-                            parameters = (title, page_url, pk)
+                            parameters = (title, page_url, last_page, pk,)
                             cursor.execute(sql_string, parameters)
 
         except Empty:
