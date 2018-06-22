@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/4.1.1/css/bootstrap.min.css') }}">
+
+    <title>{% block title %}Парсер fcmotode{% endblock %}</title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='app/base/css/base.css') }}">
+    {% block css %}{% endblock %}
+  </head>
+  <body>
+    <div class="main">
+      <div class="container-fluid">
+        <div class="header">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="{{ url_for('index') }}">Главная</a>
+            </li>
+          </ul>
+        </div>
+        <div class="content">
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="{{ url_for('static', filename='vendor/jquery/3.3.1-slim/js/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/popper/1.14.3/js/popper.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/4.1.1/js/bootstrap.min.js') }}"></script>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='app/base/js/base.js') }}"></script>
+    {% block js %}{% endblock %}
+  </body>
+</html>
