@@ -43,7 +43,7 @@
             </div>
           {% endif %}
           <a href="{{ url_for('category_remove', category_id=category.id) }}" class="btn btn-danger float-right">Удалить</a>
-          {% if True %}
+          {% if status['is_done'][category.id] %}
             <a href="{{ url_for('category_webassyst', category_id=category.id) }}" class="btn btn-info float-right">Webasyst</a>
           {% endif %}
         </div>
