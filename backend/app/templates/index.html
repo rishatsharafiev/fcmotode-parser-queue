@@ -4,6 +4,30 @@
 
 {% block content %}
 <div class="row">
+  <div class="col-sm-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Запуск парсера категории</h5>
+        <form action="{{ url_for('category_add', category_id=category_id) }}" method="post">
+          <div class="form-group row">
+            <div class="col-sm-4">
+              <label for="gender" class="col-form-label">Ссылка на категорию</label>
+            </div>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" name="url" id="url"  placeholder="Введите ссылку">
+            </div>
+          </div>
+          <div class="form-group row">
+            <div class="col-sm-12">
+              <button type="submit" class="btn btn-primary float-right">Начать</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row">
   {% for category in categories %}
     <div class="col-lg-3 col-md-4 col-sm-6">
       <div class="card">
@@ -15,15 +39,12 @@
           <p class="card-text"><a href="{{category.url}}" class="btn btn-secondary btn-sm">Ссылка на категорию</a></p>
           {% if True %}
             <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%">1213 из 12313</div>
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">{{ status['is_done'][category.id] }} / {{ status['all'][category.id] }}</div>
             </div>
           {% endif %}
+          <a href="{{ url_for('category_remove', category_id=category.id) }}" class="btn btn-danger float-right">Удалить</a>
           {% if True %}
-            <button type="button" class="btn btn-primary">Начать</button>
-          {% endif %}
-          <button type="button" class="btn btn-danger">Удалить</button>
-          {% if True %}
-            <a href="{{ url_for('category_webassyst', category_id=category.id) }}" class="btn btn-info">Webasyst</a>
+            <a href="{{ url_for('category_webassyst', category_id=category.id) }}" class="btn btn-info float-right">Webasyst</a>
           {% endif %}
         </div>
       </div>
