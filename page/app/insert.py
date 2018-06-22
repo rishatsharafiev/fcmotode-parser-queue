@@ -76,8 +76,11 @@ class TestSite(unittest.TestCase):
     def worker(self, n):
         try:
             while True:
-                page_url, page_id, pk = self.tasks.get(timeout=self.worker_timeout)
-                page = '{page_url}{page_id}'.format(page_url=page_url, page_id=page_id)
+                page_url, page_id, pk, last_page = self.tasks.get(timeout=self.worker_timeout)
+                if last_page <= 1:
+                    page = page_url
+                else:
+                    page = '{page_url}{page_id}'.format(page_url=page_url, page_id=page_id)
                 links = self.get_product_links_by_page(page)
                 with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
                     with connection.cursor() as cursor:
@@ -119,7 +122,7 @@ class TestSite(unittest.TestCase):
                     last_page = row[1]
                     pk = row[2]
                     for page_id in range(1, last_page + 1):
-                        self.tasks.put((page_url, page_id, pk))
+                        self.tasks.put((page_url, page_id, pk, last_page))
 
     def run_parallel(self):
         gevent.joinall([

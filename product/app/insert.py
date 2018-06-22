@@ -154,96 +154,107 @@ class TestSite(unittest.TestCase):
                 url, category_id, pk = self.tasks.get(timeout=self.worker_timeout)
                 with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
                     with connection.cursor() as cursor:
-                        product = self.get_product_by_link(url)
-                        if product:
-                            sql_string = """
-                                INSERT INTO "product"
-                                    (
-                                        "page_id",
-                                        "url",
-                                        "name_url",
-                                        "back_picture",
-                                        "colors",
-                                        "description_html",
-                                        "description_text",
-                                        "front_picture",
-                                        "manufacturer",
-                                        "name",
-                                        "price_cleaned",
-                                        "is_done"
-                                    )
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
-                                ON CONFLICT (url, page_id) DO UPDATE
-                                    SET
-                                        "is_done" = TRUE,
-                                        "name_url" = %s,
-                                        "back_picture" = %s,
-                                        "colors" = %s,
-                                        "description_html" = %s,
-                                        "description_text" = %s,
-                                        "front_picture" = %s,
-                                        "manufacturer" = %s,
-                                        "name" = %s,
-                                        "price_cleaned" = %s
-                                RETURNING id;
-                            """
-                            page_id = pk,
-                            name_url = url.split('/')[-1][:2044],
-                            url = url[:2044],
-                            back_picture = product['back_picture'][:2044],
-                            colors = product['colors'][:2044],
-                            description_html = product['description_html'][:5000],
-                            description_text = product['description_text'][:5000],
-                            front_picture = product['front_picture'][:2044],
-                            manufacturer = product['manufacturer'][:2044],
-                            name = product['name'][:2044],
-                            price_cleaned = product['price_cleaned'][:2044],
+                        sql_string = """
+                            SELECT
+                                "id",
+                                "url"
+                            FROM "product"
+                            WHERE "is_done" = TRUE;
+                        """
+                        cursor.execute(sql_string)
 
-                            parameters = (
-                                page_id,
-                                url,
-                                name_url,
-                                back_picture,
-                                colors,
-                                description_html,
-                                description_text,
-                                front_picture,
-                                manufacturer,
-                                name,
-                                price_cleaned,
-                                name_url,
-                                back_picture,
-                                colors,
-                                description_html,
-                                description_text,
-                                front_picture,
-                                manufacturer,
-                                name,
-                                price_cleaned,
-                            )
-                            cursor.execute(sql_string, parameters)
-                            product_id = cursor.fetchone()[0]
-                            connection.commit()
-                            if product_id:
-                                all_size = product['all_size']
-                                active_size = product['active_size']
-                                for size in product['all_size']:
-                                    if size in active_size:
-                                        available = True
-                                    else:
-                                        available = False
-                                    sql_string = """
-                                        INSERT INTO "size" ("product_id", "available", "value")
-                                            VALUES (%s, %s, %s)
-                                        ON CONFLICT (value, product_id) DO UPDATE
-                                            SET
-                                                "product_id" = %s,
-                                                "available" = %s,
-                                                "value" = %s;
-                                    """
-                                    parameters = ( product_id, available, size, product_id, available, size,)
-                                    result = cursor.execute(sql_string, parameters)
+                        if (pk, url,) not in cursor.fetchall():
+                            product = self.get_product_by_link(url)
+                            if product:
+                                sql_string = """
+                                    INSERT INTO "product"
+                                        (
+                                            "page_id",
+                                            "url",
+                                            "name_url",
+                                            "back_picture",
+                                            "colors",
+                                            "description_html",
+                                            "description_text",
+                                            "front_picture",
+                                            "manufacturer",
+                                            "name",
+                                            "price_cleaned",
+                                            "is_done"
+                                        )
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                                    ON CONFLICT (url, page_id) DO UPDATE
+                                        SET
+                                            "updated_at"=NOW(),
+                                            "is_done" = TRUE,
+                                            "name_url" = %s,
+                                            "back_picture" = %s,
+                                            "colors" = %s,
+                                            "description_html" = %s,
+                                            "description_text" = %s,
+                                            "front_picture" = %s,
+                                            "manufacturer" = %s,
+                                            "name" = %s,
+                                            "price_cleaned" = %s
+                                    RETURNING id;
+                                """
+                                page_id = pk,
+                                name_url = url.split('/')[-1][:2044],
+                                url = url[:2044],
+                                back_picture = product['back_picture'][:2044],
+                                colors = product['colors'][:2044],
+                                description_html = product['description_html'][:5000],
+                                description_text = product['description_text'][:5000],
+                                front_picture = product['front_picture'][:2044],
+                                manufacturer = product['manufacturer'][:2044],
+                                name = product['name'][:2044],
+                                price_cleaned = product['price_cleaned'][:2044],
+
+                                parameters = (
+                                    page_id,
+                                    url,
+                                    name_url,
+                                    back_picture,
+                                    colors,
+                                    description_html,
+                                    description_text,
+                                    front_picture,
+                                    manufacturer,
+                                    name,
+                                    price_cleaned,
+                                    name_url,
+                                    back_picture,
+                                    colors,
+                                    description_html,
+                                    description_text,
+                                    front_picture,
+                                    manufacturer,
+                                    name,
+                                    price_cleaned,
+                                )
+                                cursor.execute(sql_string, parameters)
+                                product_id = cursor.fetchone()[0]
                                 connection.commit()
+                                if product_id:
+                                    all_size = product['all_size']
+                                    active_size = product['active_size']
+                                    for size in product['all_size']:
+                                        if size in active_size:
+                                            available = True
+                                        else:
+                                            available = False
+                                        sql_string = """
+                                            INSERT INTO "size" ("product_id", "available", "value")
+                                                VALUES (%s, %s, %s)
+                                            ON CONFLICT (value, product_id) DO UPDATE
+                                                SET
+                                                    "product_id" = %s,
+                                                    "available" = %s,
+                                                    "value" = %s;
+                                        """
+                                        parameters = ( product_id, available, size, product_id, available, size,)
+                                        result = cursor.execute(sql_string, parameters)
+                                    connection.commit()
 
         except Empty:
             print('Worker #{} exited!'.format(n))
