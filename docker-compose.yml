@@ -1,0 +1,134 @@
+version: "3.5"
+networks:
+  backend:
+    driver: ${NETWORKS_DRIVER}
+    # driver_opts:
+    #   encrypted: "1"
+volumes:
+  postgres:
+    driver: ${VOLUMES_DRIVER}
+  portainer:
+    driver: ${VOLUMES_DRIVER}
+  backend:
+    driver: ${VOLUMES_DRIVER}
+  category:
+    driver: ${VOLUMES_DRIVER}
+  page:
+    driver: ${VOLUMES_DRIVER}
+  product:
+    driver: ${VOLUMES_DRIVER}
+services:
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - backend:/var/log
+      - ${BACKEND_APP_PATH}:/app
+    ports:
+      - "${BACKEND_SUPERUSER_PORT}:9001"
+      - "${BACKEND_APP_PORT}:5000"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  category:
+    build:
+      context: ./category
+    volumes:
+      - category:/var/log
+      - ${CATEGORY_APP_PATH}:/app
+    ports:
+      - "${CATEGORY_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  page:
+    build:
+      context: ./page
+    volumes:
+      - page:/var/log
+      - ${PAGE_APP_PATH}:/app
+    ports:
+      - "${PAGE_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  product:
+    build:
+      context: ./page
+    volumes:
+      - product:/var/log
+      - ${PRODUCT_APP_PATH}:/app
+    ports:
+      - "${PRODUCT_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:9.6-alpine
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}1:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - backend
+  adminer:
+    image: adminer
+    ports:
+      - ${ADMINER_PORT}:8080
+    depends_on:
+      - postgres
+    networks:
+      - backend
+  portainer:
+    image: portainer/portainer:latest
+    ports:
+      - "${PORTAINER_PORT}:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer:/data
+    networks:
+      - backend
+  cadvisor:
+    image: google/cadvisor:latest
+    ports:
+      - "${CADVISOR_PORT}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - backend
