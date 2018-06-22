@@ -102,7 +102,7 @@ class TestSite(unittest.TestCase):
             # 'Цена',
             price = root.cssselect('.PriceArea .Price')
             if price is not None:
-                price = price[0].text
+                price = price[0].text_content()
             else:
                 price = ''
             price_cleaned = price.replace('руб.', '').replace(' ', '').replace(',', '.')
