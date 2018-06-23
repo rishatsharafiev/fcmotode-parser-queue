@@ -110,7 +110,7 @@ class TestSite(unittest.TestCase):
             # 'Фотография'
             front_picture = root.cssselect('#ICImageMediumLarge')
             if front_picture is not None:
-                front_picture = front_picture[0].get('src')
+                front_picture = 'https://www.fc-moto.de{}'.format(front_picture[0].get('src'))
             else:
                 front_picture = ''
 
