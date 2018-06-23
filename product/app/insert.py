@@ -279,8 +279,9 @@ class TestSite(unittest.TestCase):
                         "id"
                     FROM "page"
                     WHERE "is_done" = FALSE
+                    ORDER BY RANDOM()
                     LIMIT {limit};
-                """.format(limit=self.worker_number*10)
+                """.format(limit=self.worker_number*20)
                 cursor.execute(sql_string)
                 for row in cursor.fetchall():
                     url = row[0]
