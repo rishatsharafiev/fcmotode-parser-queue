@@ -3,15 +3,13 @@ function update_status(response) {
   var is_done = response['is_done'] || {};
 
   for(var key in all) {
-    if (all.hasOwnProperty(key)) {
-      var progressBar = document.querySelector("#category_" + key + " .progress-bar");
-      if(progressBar) {
-        var done = is_done[key] || 0;
-        var all = all[key] || 0;
-        var progress = Math.round(done / all * 100);
-        progressBar.style.width = progress + "%";
-        progressBar.textContent = done + " из " +  all+ " (" + progress + "%)";
-      }
+    var progressBar = document.querySelector("#category_" + key + " .progress-bar");
+    if(progressBar) {
+      var top = parseInt(is_done[key]) || 0;
+      var bottom = parseInt(all[key]) || 0;
+      var progress = Math.round(top / bottom * 100);
+      progressBar.style.width = progress + "%";
+      progressBar.textContent = top + " из " +  bottom+ " (" + progress + "%)";
     }
   }
 }
