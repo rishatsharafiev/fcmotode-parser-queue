@@ -1,41 +1,41 @@
 # common
-NETWORKS_DRIVER=overlay
-VOLUMES_DRIVER=local
+export NETWORKS_DRIVER=overlay
+export VOLUMES_DRIVER=local
 
 # backend
-BACKEND_TAG=latest
-BACKEND_SUPERUSER_PORT=9001
-BACKEND_APP_PATH=./backend/app
-BACKEND_APP_PORT=5000
+export BACKEND_TAG=latest
+export BACKEND_SUPERUSER_PORT=9001
+export BACKEND_APP_PATH=./backend/app
+export BACKEND_APP_PORT=5000
 
 # category
-CATEGORY_TAG=latest
-CATEGORY_SUPERUSER_PORT=9002
-CATEGORY_APP_PATH=./category/app
+export CATEGORY_TAG=latest
+export CATEGORY_SUPERUSER_PORT=9002
+export CATEGORY_APP_PATH=./category/app
 
 # page
-PAGE_TAG=latest
-PAGE_SUPERUSER_PORT=9003
-PAGE_APP_PATH=./page/app
+export PAGE_TAG=latest
+export PAGE_SUPERUSER_PORT=9003
+export PAGE_APP_PATH=./page/app
 
 # product
-PRODUCT_TAG=latest
-PRODUCT_SUPERUSER_PORT=9004
-PRODUCT_APP_PATH=./product/app
+export PRODUCT_TAG=latest
+export PRODUCT_SUPERUSER_PORT=9004
+export PRODUCT_APP_PATH=./product/app
 
 # postgres
-POSTGRES_DB=fcmoto
-POSTGRES_USER=fcmoto
-POSTGRES_PASSWORD=fcmoto
-POSTGRES_HOST=fcmoto_postgres
-POSTGRES_PORT=5432
+export POSTGRES_DB=fcmoto
+export POSTGRES_USER=fcmoto
+export POSTGRES_PASSWORD=fcmoto
+export POSTGRES_HOST=fcmoto_postgres
+export POSTGRES_PORT=5432
 
 # adminer
-ADMINER_PORT=8080
+export ADMINER_PORT=8080
 
 # portainer
-PORTAINER_PORT=9000
+export PORTAINER_PORT=9000
 
 # cadvisor
-CADVISOR_PORT=8888
+export CADVISOR_PORT=8888
 
