@@ -51,9 +51,9 @@ def get_product_status():
                 for row in cursor.fetchall():
                     categories_is_done[row[0]] = row[1]
                 sql_string = """
-                    SELECT "page"."category_id", COUNT("product"."id") AS "count"
+                    SELECT "page"."category_id", COUNT("page"."id") AS "count"
                     FROM "product"
-                    INNER JOIN "page" ON "page"."id" = "product"."page_id"
+                    RIGHT JOIN "page" ON "page"."id" = "product"."page_id"
                     GROUP BY "page"."category_id"
                 """
                 cursor.execute(sql_string)
@@ -74,9 +74,9 @@ def set_category(url):
             with connection.cursor() as cursor:
                 sql_string = """
                     INSERT INTO "category"("url")
-                    VALUES ('%s');
+                    VALUES (%s);
                 """
-                parameters = (url, )
+                parameters = (url,)
                 cursor.execute(sql_string, parameters)
                 connection.commit()
         result = True
@@ -509,15 +509,16 @@ def index():
 @app.route('/category', methods=['POST'])
 def category_add():
     if request.method == 'POST':
-        gender = request.form.get('url', '')
-        set_category(url)
-        redirect('index')
+        url = request.form.get('url', '')
+        if url:
+            set_category(url)
+        return redirect(url_for('index'))
 
 @app.route('/category/<int:category_id>/remove', methods=['GET'])
 def category_remove(category_id):
     if request.method == 'GET':
         id_deleted = remove_category(category_id)
-        return redirect('index')
+        return redirect(url_for('index'))
 
 @app.route('/category/webassyst/<int:category_id>', methods=['GET', 'POST'])
 def category_webassyst(category_id):

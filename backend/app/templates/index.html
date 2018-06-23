@@ -8,13 +8,13 @@
     <div class="card">
       <div class="card-body">
         <h5 class="card-title">Запуск парсера категории</h5>
-        <form action="{{ url_for('category_add', category_id=category_id) }}" method="post">
+        <form action="{{ url_for('category_add') }}" method="post">
           <div class="form-group row">
             <div class="col-sm-4">
               <label for="gender" class="col-form-label">Ссылка на категорию</label>
             </div>
             <div class="col-sm-8">
-              <input type="text" class="form-control" name="url" id="url"  placeholder="Введите ссылку">
+              <input type="text" class="form-control" name="url" id="url" placeholder="Введите ссылку">
             </div>
           </div>
           <div class="form-group row">
@@ -37,9 +37,22 @@
             <p class="card-text">Название категории: {{category.title}}</p>
           {% endif %}
           <p class="card-text"><a href="{{category.url}}" class="btn btn-secondary btn-sm">Ссылка на категорию</a></p>
-          {% if True %}
+          {% if status['all'][category.id] %}
+            {% if (status['is_done'][category.id] and status['all'][category.id]) %}
+              {% set done = status['is_done'][category.id] %}
+              {% set all = status['all'][category.id] %}
+              {% set progress = done / all * 100 %}
+            {% elif ( not status['is_done'][category.id] and status['all'][category.id]) %}
+              {% set done = 0 %}
+              {% set all = status['all'][category.id] %}
+              {% set progress = done / all * 100 %}
+            {% else %}
+              {% set done = 0 %}
+              {% set all = 0 %}
+              {% set progress = 0 %}
+            {% endif %}
             <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">{{ status['is_done'][category.id] }} / {{ status['all'][category.id] }}</div>
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="{{ done }}" style="width:{{progress|round}}%" aria-valuemin="0" aria-valuemax="{{all}}">{{done}}из {{all}} ({{progress|round }}%)</div>
             </div>
           {% endif %}
           <a href="{{ url_for('category_remove', category_id=category.id) }}" class="btn btn-danger float-right">Удалить</a>
