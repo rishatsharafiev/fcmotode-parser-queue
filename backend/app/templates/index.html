@@ -30,7 +30,7 @@
 <div class="row">
   {% for category in categories %}
     <div class="col-lg-3 col-md-4 col-sm-6">
-      <div class="card">
+      <div class="card" id="category_{{category.id}}">
         <div class="card-body">
           <h5 class="card-title">#{{category.id}}</h5>
           {% if category.title %}
@@ -52,7 +52,7 @@
               {% set progress = 0 %}
             {% endif %}
             <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="{{ done }}" style="width:{{progress|round}}%" aria-valuemin="0" aria-valuemax="{{all}}">{{done}}из {{all}} ({{progress|round }}%)</div>
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="{{ done }}" style="width:{{progress|round}}%" aria-valuemin="0" aria-valuemax="{{all}}">{{done}} из {{all}} ({{progress|round }}%)</div>
             </div>
           {% endif %}
           <a href="{{ url_for('category_remove', category_id=category.id) }}" class="btn btn-danger float-right">Удалить</a>

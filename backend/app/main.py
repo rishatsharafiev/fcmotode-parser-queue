@@ -537,7 +537,7 @@ def category_webassyst(category_id):
 # api resources
 class StatusResource(Resource):
     def get(self):
-        return {}
+        return get_product_status()
 
 api.add_resource(StatusResource, '/category/status')
 
