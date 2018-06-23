@@ -26,7 +26,7 @@ class TestSite(unittest.TestCase):
     def setUp(self):
         # initialize logget
         self.logger = logging.getLogger(__name__)
-        logger_path = '/var/log'
+        logger_path =  os.getenv('PRODUCT_LOG_PATH', '')
         logger_handler = logging.FileHandler(os.path.join(logger_path, '{}.log'.format(__name__)))
         logger_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         logger_handler.setFormatter(logger_formatter)
@@ -83,7 +83,7 @@ class TestSite(unittest.TestCase):
 
             # 'Цвета',
             colors = root.cssselect('.ICVariationSelect .Headline.image .Bold.Value')
-            if colors is not None:
+            if len(colors):
                 colors = colors[0].text
             else:
                 colors = ''
@@ -101,12 +101,11 @@ class TestSite(unittest.TestCase):
 
             # 'Цена',
             price = root.cssselect('.PriceArea .Price')
-            if price is not None:
+            if len(price):
                 price = price[0].text_content()
             else:
                 price = ''
-            price_cleaned = price.replace('руб.', '').replace(' ', '').replace(',', '.')
-
+            price_cleaned = price.replace('руб.', '').replace(' ', '').replace(',', '.').strip()
             # 'Фотография'
             front_picture = root.cssselect('#ICImageMediumLarge')
             if front_picture is not None:
@@ -235,7 +234,17 @@ class TestSite(unittest.TestCase):
                                 cursor.execute(sql_string, parameters)
                                 product_id = cursor.fetchone()[0]
                                 connection.commit()
+
                                 if product_id:
+                                    sql_string = """
+                                        UPDATE "page"
+                                        SET "is_done" = TRUE
+                                        WHERE "id" = %s;
+                                    """
+                                    parameters = (pk, )
+                                    result = cursor.execute(sql_string, parameters)
+                                    connection.commit()
+
                                     all_size = product['all_size']
                                     active_size = product['active_size']
                                     for size in product['all_size']:
@@ -269,8 +278,9 @@ class TestSite(unittest.TestCase):
                         "category_id",
                         "id"
                     FROM "page"
-                    WHERE "is_done" = FALSE;
-                """
+                    WHERE "is_done" = FALSE
+                    LIMIT {limit};
+                """.format(limit=self.worker_number*10)
                 cursor.execute(sql_string)
                 for row in cursor.fetchall():
                     url = row[0]

@@ -1,5 +1,4 @@
 function update_status(response) {
-  console.log(response)
   var all = response['all'] || {};
   var is_done = response['is_done'] || {};
 
@@ -10,11 +9,8 @@ function update_status(response) {
         var done = is_done[key] || 0;
         var all = all[key] || 0;
         var progress = Math.round(done / all * 100);
-        console.log(done, all, progress)
         progressBar.style.width = progress + "%";
-        console.log(progressBar)
         progressBar.textContent = done + " из " +  all+ " (" + progress + "%)";
-        console.log(progressBar)
       }
     }
   }
