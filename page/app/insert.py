@@ -94,8 +94,7 @@ class TestSite(unittest.TestCase):
                                     INSERT INTO
                                         "page" ( "category_id", "url")
                                     VALUES {values}
-                                    ON CONFLICT (category_id, url) DO UPDATE
-                                       SET is_done = FALSE;
+                                    ON CONFLICT (category_id, url) DO NOTHING;
                                 """.format(values=values)
                                 cursor.execute(sql_string)
                                 connection.commit()
