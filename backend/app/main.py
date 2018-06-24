@@ -292,7 +292,7 @@ def export_webassyst_csv(stream, category_id, gender=''):
                         "size"."available",
                         "size"."value"
                     FROM "product"
-                    INNER JOIN "size" ON "product"."id" = "size"."product_id"
+                    LEFT JOIN "size" ON "product"."id" = "size"."product_id"
                     WHERE "product"."id" = %s
                     ORDER BY "value";
                 """
@@ -305,6 +305,7 @@ def export_webassyst_csv(stream, category_id, gender=''):
                 counter = 1
                 all_size=[]
                 items = list(cursor.fetchall())
+
                 for item in items:
                     back_picture = item[0].replace('"', "'")
                     colors = item[1].replace('"', "'")
@@ -316,8 +317,8 @@ def export_webassyst_csv(stream, category_id, gender=''):
                     name_url = item[7].replace('"', "'")
                     price_cleaned = item[8].split('.')[0] if item[8] else ''
                     url = item[9]
-                    available = item[10]
-                    value = item[11].replace('"', "'")
+                    available = item[10] if item[10] else ''
+                    value = item[11].replace('"', "'") if item[11] else ''
 
                     all_size.append(value)
                     keywords = ", ".join(name.split(' '))
@@ -412,7 +413,7 @@ def export_webassyst_csv(stream, category_id, gender=''):
 
                     if len(items) == counter:
                         all_size = ",".join(sorted(all_size))
-                        available_order = sum([item[10] for item in items])
+                        available_order = sum([(item[10] if item[11] else 1) for item in items])
 
                         main_item = [
                             name,
