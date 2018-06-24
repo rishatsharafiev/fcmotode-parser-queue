@@ -34,7 +34,7 @@ class TestSite(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
-        self.worker_number = 5
+        self.worker_number = 10
         self.worker_timeout = 10
         self.queue_size = 100
         self.tasks = Queue(maxsize=self.queue_size)
@@ -66,7 +66,7 @@ class TestSite(unittest.TestCase):
 
         try:
             root = self.get_selector_root(page_url)
-            links = root.cssselect('.CategoryList .InfoArea .Headline a[itemprop="url"]')
+            links = root.cssselect('.CategoryProducts .InfoArea .ImageArea > a')
             links = ['{base_path}{link}'.format(base_path=self.base_path, link=link.get('href', '')) for link in links]
         except Exception as e:
             self.logger.exception(str(e))

@@ -31,19 +31,20 @@ class TestSite(unittest.TestCase):
         self.POSTGRES_PORT = os.getenv('POSTGRES_PORT', 5432)
 
     def main(self):
-        with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
-            with connection.cursor() as cursor:
-                sql_string = """
-                    UPDATE "category" SET
-                        "is_done" = TRUE
-                    WHERE "id" IN (
-                        SELECT "category_id"
-                        FROM "page"
-                        WHERE "is_done" != FALSE
-                        GROUP BY category_id
-                    );
-                """
-                cursor.execute(sql_string)
+        pass
+        # with psycopg2.connect(dbname=self.POSTGRES_DB, user=self.POSTGRES_USER, password=self.POSTGRES_PASSWORD, host=self.POSTGRES_HOST, port=self.POSTGRES_PORT) as connection:
+        #     with connection.cursor() as cursor:
+        #         sql_string = """
+        #             UPDATE "category" SET
+        #                 "is_done" = TRUE
+        #             WHERE "id" IN (
+        #                 SELECT "category_id"
+        #                 FROM "page"
+        #                 WHERE "is_done" != FALSE
+        #                 GROUP BY category_id
+        #             );
+        #         """
+        #         cursor.execute(sql_string)
 
 
     def test_loop(self):
