@@ -268,7 +268,14 @@ def export_webassyst_csv(stream, category_id, gender=''):
             ]
             csv_writer.writerow([item.encode('utf8').decode('utf8') for item in col_names])
 
-            cursor.execute('SELECT DISTINCT "id" FROM "product";')
+            sql_string = """
+                SELECT "product"."id"
+                FROM "product"
+                INNER JOIN "page" ON "page"."id" = "product"."page_id"
+                WHERE "page"."category_id" = %s
+            """
+            parameters = (category_id, )
+            cursor.execute(sql_string, parameters)
             for row in cursor.fetchall():
                 sql_string = """
                     SELECT
@@ -286,12 +293,11 @@ def export_webassyst_csv(stream, category_id, gender=''):
                         "size"."value"
                     FROM "product"
                     INNER JOIN "size" ON "product"."id" = "size"."product_id"
-                    INNER JOIN "page" ON "page"."id" = "product"."page_id"
-                    WHERE "product"."id" = %s AND "page"."category_id" = %s
+                    WHERE "product"."id" = %s
                     ORDER BY "value";
                 """
                 product_id = row[0]
-                parameters = (product_id, category_id,)
+                parameters = (product_id, )
                 cursor.execute(sql_string, parameters)
 
                 product_list = []
@@ -308,8 +314,7 @@ def export_webassyst_csv(stream, category_id, gender=''):
                     manufacturer = item[5]
                     name = item[6].replace('"', "'")
                     name_url = item[7].replace('"', "'")
-                    is_float, price_cleaned = str_to_float(item[8])
-                    price_cleaned = math.ceil(price_cleaned) if is_float else ''
+                    price_cleaned = item[8].split('.')[0] if item[8] else ''
                     url = item[9]
                     available = item[10]
                     value = item[11].replace('"', "'")
