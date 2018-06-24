@@ -34,8 +34,8 @@ class TestSite(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
-        self.worker_number = 5
-        self.worker_timeout = 10
+        self.worker_number = 25
+        self.worker_timeout = 3
         self.queue_size = 100
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
@@ -243,7 +243,6 @@ class TestSite(unittest.TestCase):
                                     """
                                     parameters = (pk, )
                                     result = cursor.execute(sql_string, parameters)
-                                    connection.commit()
 
                                     all_size = product['all_size']
                                     active_size = product['active_size']
@@ -281,7 +280,7 @@ class TestSite(unittest.TestCase):
                     WHERE "is_done" = FALSE
                     ORDER BY RANDOM()
                     LIMIT {limit};
-                """.format(limit=self.worker_number*20)
+                """.format(limit=self.worker_number*10)
                 cursor.execute(sql_string)
                 for row in cursor.fetchall():
                     url = row[0]
