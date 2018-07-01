@@ -134,7 +134,7 @@ def remove_category(category_id):
 
     return True
 
-def export_webassyst_csv(stream, category_id, gender=''):
+def export_webassyst_csv(stream, category_id, gender='', course='', margin=''):
     with psycopg2.connect(dbname=POSTGRES_DB, user=POSTGRES_USER, password=POSTGRES_PASSWORD, host=POSTGRES_HOST, port=POSTGRES_PORT) as connection:
         with connection.cursor() as cursor:
             csv_writer = csv.writer(stream, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL, lineterminator='\n')
@@ -315,7 +315,11 @@ def export_webassyst_csv(stream, category_id, gender=''):
                     manufacturer = item[5]
                     name = item[6].replace('"', "'")
                     name_url = item[7].replace('"', "'")
-                    price_cleaned = item[8].split('.')[0] if item[8] else ''
+                    price_cleaned = item[8] if item[8] else ''
+                    if '€' in price_cleaned:
+                        price_cleaned = float(price_cleaned.strip('€'))*float(course)*(100+float(margin))/100
+                    elif 'руб.' in price_cleaned:
+                        price_cleaned = float(price_cleaned.strip('руб.'))*(100+float(margin))/100
                     url = item[9]
                     available = item[10] if item[10] else ''
                     value = item[11].replace('"', "'") if item[11] else ''
@@ -530,8 +534,10 @@ def category_remove(category_id):
 def category_webassyst(category_id):
     if request.method == 'POST':
         gender = request.form.get('gender', '')
+        course = request.form.get('course', '')
+        margin = request.form.get('margin', '')
         stream = StringIO()
-        export_webassyst_csv(stream, category_id, gender)
+        export_webassyst_csv(stream, category_id, gender, course, margin)
 
         output = make_response(stream.getvalue())
         output.headers["Content-Disposition"] = "attachment; filename=export_webasyst_{category_id}.csv".format(category_id=category_id)

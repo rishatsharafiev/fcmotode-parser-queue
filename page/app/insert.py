@@ -40,7 +40,7 @@ class TestSite(unittest.TestCase):
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
 
-        self.base_path = 'https://www.fc-moto.de/epages/fcm.sf/ru_RU/'
+        self.base_path = 'https://www.fc-moto.de/epages/fcm.sf/ru_RU'
 
         self.POSTGRES_DB = os.getenv('POSTGRES_DB', '')
         self.POSTGRES_USER = os.getenv('POSTGRES_USER', '')

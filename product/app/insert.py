@@ -17,10 +17,18 @@ import logging
 import unittest
 import re
 import psycopg2
+import time
 from datetime import datetime
-from io import StringIO
-import requests
-from lxml import html
+
+from selenium import webdriver
+from selenium.webdriver.common import proxy
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import WebDriverException, NoSuchElementException, TimeoutException
+from selenium.webdriver.remote.remote_connection import RemoteConnection
+
 
 class TestSite(unittest.TestCase):
     def setUp(self):
@@ -34,9 +42,9 @@ class TestSite(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
 
-        self.worker_number = 25
-        self.worker_timeout = 3
-        self.queue_size = 100
+        self.worker_number = 1
+        self.worker_timeout = 30
+        self.queue_size = 10
         self.tasks = Queue(maxsize=self.queue_size)
         self.semaphore = BoundedSemaphore(1)
 
@@ -48,84 +56,128 @@ class TestSite(unittest.TestCase):
         self.POSTGRES_HOST = os.getenv('POSTGRES_HOST', '')
         self.POSTGRES_PORT = os.getenv('POSTGRES_PORT', 5432)
 
-    def get_selector_root(self, url):
-        response = requests.get(url)
-        response.encoding = 'utf-8'
-        stream = StringIO(response.text)
-        root = html.parse(stream).getroot()
-        return root
+        self.SELENIUM_HUB_URL = os.getenv('SELENIUM_HUB_URL', '')
+        self.driver = None
 
-    def get_xpath_root(self, url):
-        response = requests.get(url)
-        response.encoding = 'utf-8'
-        root = html.fromstring(response.text)
-        return root
+    def get_element_by_css_selector(self, driver, selector):
+        try:
+            element = driver.find_element_by_css_selector(selector)
+        except (NoSuchElementException, TimeoutException):
+            element = None
+        return element
+
+    def get_elements_by_css_selector(self, driver, selector):
+        try:
+            elements = driver.find_elements_by_css_selector(selector)
+        except (NoSuchElementException, TimeoutException):
+            elements = None
+        return elements
 
     def get_product_by_link(self, page_url):
+        self.driver = None
         product = None
 
         try:
-            root = self.get_selector_root(page_url)
+            self.options = webdriver.ChromeOptions()
+            self.options.add_argument('--disable-logging')
+            self.options.add_argument('--disable-infobars')
+            self.options.add_argument('--disable-extensions')
+            self.options.add_argument('--disable-web-security')
+            self.options.add_argument('--no-sandbox')
+            self.options.add_argument('--headless')
+            self.options.add_argument('--window-size=600,480')
+            self.options.add_argument('--silent')
+            self.options.add_argument('--ignore-certificate-errors')
+            self.options.add_argument('--disable-popup-blocking')
+            self.options.add_argument('--incognito')
+            self.options.add_argument('--lang=ru')
+            self.options.add_experimental_option('prefs', {'intl.accept_languages': 'ru_RU'})
+
+            # self.capabilities = {
+            #     'browserName': 'chrome',
+            #     'chromeOptions':  {
+            #         'useAutomationExtension': False,
+            #         'forceDevToolsScreenshot': True,
+            #         'directConnect': True,
+            #         'args': [
+            #             # '--start-maximized',
+            #             '--disable-infobars',
+            #             '--disable-extensions',
+            #             '--disable-web-security',
+            #             # '--disable-gpu',
+            #             # '--disable-dev-shm-usage',
+            #             '--no-sandbox',
+            #             '--headless',
+            #             '--window-size=600,480',
+            #             # '--remote-debugging-port=9222',
+            #             # '--crash-dumps-dir=/tmp',
+            #             '--silent',
+            #             '--ignore-certificate-errors',
+            #             '--disable-popup-blocking',
+            #             '--incognito',
+            #             '--lang=ru'
+            #         ],
+            #     },
+            #     'chrome.prefs': {
+            #         'intl.accept_languages': 'ru_RU'
+            #     }
+            # }
+
+
+            executor = RemoteConnection(self.SELENIUM_HUB_URL, resolve_ip=False)
+            self.driver = webdriver.Remote(command_executor=executor, desired_capabilities=self.options.to_capabilities())
+            self.driver.set_page_load_timeout(3*60)
+            self.driver.get(page_url)
+
+            initial_wait = WebDriverWait(self.driver, 3*60)
+            initial_wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.ContentAreaWrapper'))
+            )
 
             # 'Наименование',
-            name = root.cssselect('.ICProductVariationArea [itemprop="name"]')
-            if name is not None:
-                name = name[0].text
-            else:
-                name = ''
-
+            name = self.get_element_by_css_selector(self.driver, '.ICProductVariationArea [itemprop="name"]')
+            name = name.text if name else ''
+            self.driver.save_screenshot('screen.png')
             # 'Производитель',
-            manufacturer = root.cssselect('.ICProductVariationArea [itemprop="manufacturer"]')
-            if manufacturer is not None:
-                manufacturer = manufacturer[0].text
-            else:
-                manufacturer = ''
+            manufacturer = self.get_element_by_css_selector(self.driver, '.ICProductVariationArea [itemprop="manufacturer"]')
+            manufacturer = manufacturer.text if manufacturer else ''
 
             # 'Цвета',
-            colors = root.cssselect('.ICVariationSelect .Headline.image .Bold.Value')
-            if len(colors):
-                colors = colors[0].text
-            else:
-                colors = ''
+            colors = self.get_element_by_css_selector(self.driver, '.ICVariationSelect .Headline.image .Bold.Value')
+            colors = colors.text if colors else ''
 
             # 'Все размеры',
-            all_size = root.cssselect('.ICVariationSelect li > button')
+            all_size = self.get_elements_by_css_selector(self.driver, '.ICVariationSelect li > button')
             all_size = set([size.text for size in all_size] if all_size else [])
 
             # 'Неактивные размеры',
-            disabled_size = root.cssselect('.ICVariationSelect li.disabled > button')
+            disabled_size = self.get_elements_by_css_selector(self.driver, '.ICVariationSelect li.disabled > button')
             disabled_size = set([size.text for size in disabled_size] if disabled_size else [])
 
             # 'Активные размеры',
             active_size = all_size.difference(disabled_size)
 
             # 'Цена',
-            price = root.cssselect('.PriceArea .Price')
-            if len(price):
-                price = price[0].text_content()
-            else:
-                price = ''
-            price_cleaned = price.replace('руб.', '').replace(' ', '').replace(',', '.').strip()
-            # 'Фотография'
-            front_picture = root.cssselect('#ICImageMediumLarge')
-            if front_picture is not None:
-                front_picture = 'https://www.fc-moto.de{}'.format(front_picture[0].get('src'))
-            else:
-                front_picture = ''
+            price = self.get_element_by_css_selector(self.driver, '.PriceArea .Price')
+            price = price.text if price else ''
+            price_cleaned = price.replace(' ', '').replace(',', '.')
 
-            back_picture = ''
+            # 'Фотография'
+            front_picture = self.get_element_by_css_selector(self.driver, '#ICImageMediumLarge')
+            front_picture = front_picture.get_attribute('src') if front_picture else ''
+
+            activate_second_picture = self.get_element_by_css_selector(self.driver, '#ProductThumbBar > li:nth-child(2) > img')
+
+            if activate_second_picture:
+                activate_second_picture.click()
+                time.sleep(2)
+                back_picture = self.get_element_by_css_selector(self.driver, '#ICImageMediumLarge')
+            back_picture = back_picture.get_attribute('src') if activate_second_picture and back_picture else ''
 
             # 'Описание'
-            description = root.cssselect('.description[itemprop="description"]')
-            if description is not None:
-                description_text = description[0].text_content()
-            else:
-                description_text = ''
-
-            if description is not None:
-                description_html = html.tostring(description[0])
-            else:
-                description_html = ''
+            description = self.get_element_by_css_selector(self.driver, '.description[itemprop="description"]')
+            description_text = description.text if description else ''
+            description_html = description.get_attribute('innerHTML') if description else ''
 
             product = {
                 'name': name,
@@ -139,12 +191,23 @@ class TestSite(unittest.TestCase):
                 'front_picture': front_picture,
                 'back_picture': back_picture,
                 'description_text': description_text,
-                'description_html': description_html.decode("utf-8"),
+                'description_html': description_html,
 
             }
+            print(product)
+        except WebDriverException as e:
+            self.logger.exception('Error worker: {worker}, error: {error}'.format(worker=worker, error=str(e)))
+            if self.driver:
+                self.driver.quit()
+            # self.get_product_by_link(page_url)
+        except KeyboardInterrupt:
+            if self.driver:
+                self.driver.quit()
         except Exception as e:
             self.logger.exception(str(e))
-
+        finally:
+            if self.driver:
+                self.driver.quit()
         return product
 
     def worker(self, n):
@@ -295,8 +358,15 @@ class TestSite(unittest.TestCase):
         ])
 
     def test_loop(self):
-        while True:
-            self.run_parallel()
+        try:
+            while True:
+                self.run_parallel()
+        except KeyboardInterrupt:
+            if self.driver:
+                self.driver.quit()
+        finally:
+            if self.driver:
+                self.driver.quit()
 
 if __name__ == '__main__':
     unittest.main()
