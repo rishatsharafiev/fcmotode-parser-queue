@@ -9,7 +9,7 @@ RUN apk add --update --no-cache --virtual .build-deps \
 	rm -r /usr/lib/python*/ensurepip && \
 	pip3 install --upgrade pipenv
 
-RUN apk add --update --no-cache python3 postgresql-dev gcc musl-dev libxslt-dev
+RUN apk add --update --no-cache python3 postgresql-dev gcc musl-dev
 
 # install application
 ADD app /app

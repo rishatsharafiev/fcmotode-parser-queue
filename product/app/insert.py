@@ -137,7 +137,7 @@ class TestSite(unittest.TestCase):
             # 'Наименование',
             name = self.get_element_by_css_selector(self.driver, '.ICProductVariationArea [itemprop="name"]')
             name = name.text if name else ''
-            self.driver.save_screenshot('screen.png')
+
             # 'Производитель',
             manufacturer = self.get_element_by_css_selector(self.driver, '.ICProductVariationArea [itemprop="manufacturer"]')
             manufacturer = manufacturer.text if manufacturer else ''

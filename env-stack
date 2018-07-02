@@ -2,6 +2,14 @@
 export NETWORKS_DRIVER=overlay
 export VOLUMES_DRIVER=local
 
+# selenium
+export SELENIUM_HUB_URL=http://fcmoto_hub:4444/wd/hub
+export SELENIUM_HUB_PORT=4444
+export SELENIUM_NODE_CHROME_PORT=5556
+export SELENIUM_NODE_MAX_CONTAINERS=1
+export SELENIUM_NODE_MAX_INSTANCES=1
+export SELENIUM_NODE_MAX_SESSION=1
+
 # backend
 export BACKEND_TAG=latest
 export BACKEND_SUPERUSER_PORT=9001
