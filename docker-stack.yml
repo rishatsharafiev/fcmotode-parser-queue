@@ -1,0 +1,204 @@
+version: "3.5"
+networks:
+  backend:
+    driver: overlay
+    # driver_opts:
+    #   encrypted: "1"
+volumes:
+  postgres:
+    driver: ${VOLUMES_DRIVER}
+  portainer:
+    driver: ${VOLUMES_DRIVER}
+  backend:
+    driver: ${VOLUMES_DRIVER}
+  category:
+    driver: ${VOLUMES_DRIVER}
+  page:
+    driver: ${VOLUMES_DRIVER}
+  product:
+    driver: ${VOLUMES_DRIVER}
+services:
+  hub:
+    image: selenium/hub:3.12.0-boron
+    environment:
+      - TZ=Europe/Moscow
+      - LANG_WHICH=ru
+      - LANG_WHERE=RU
+      - DBUS_SESSION_BUS_ADDRESS=/dev/null
+      - GRID_NEW_SESSION_WAIT_TIMEOUT=-1
+      - GRID_THROW_ON_CAPABILITY_NOT_PRESENT=true
+      - GRID_JETTY_MAX_THREADS=-1
+      - GRID_CLEAN_UP_CYCLE=5000
+      - GRID_BROWSER_TIMEOUT=0
+      - GRID_TIMEOUT=0
+      - GRID_DEBUG=false
+      - GRID_MAX_SESSION=100
+      # - JAVA_OPTS=-Xmx1024m
+    entrypoint: bash -c 'SE_OPTS="-timeout 86400 -browserTimeout 86400" /opt/bin/entry_point.sh'
+    ports:
+      - "${SELENIUM_HUB_PORT}:4444"
+    networks:
+      - backend
+    volumes:
+      - /dev/shm:/dev/shm
+  chrome:
+    image: selenium/node-chrome:3.12.0-boron
+    environment:
+      - TZ=Europe/Moscow
+      - LANG_WHICH=ru
+      - LANG_WHERE=RU
+      # - SCREEN_WIDTH=600
+      # - SCREEN_HEIGHT=480
+      - HUB_PORT_4444_TCP_ADDR=hub
+      - HUB_PORT_4444_TCP_PORT=${SELENIUM_HUB_PORT}
+      - NODE_MAX_INSTANCES=${SELENIUM_NODE_MAX_INSTANCES}
+      - NODE_MAX_SESSION=${SELENIUM_NODE_MAX_SESSION}
+      # - JAVA_OPTS=-Xmx250m
+      # - LOGSPOUT=ignore
+      # - DBUS_SESSION_BUS_ADDRESS=/dev/null
+    entrypoint: bash -c 'SE_OPTS="-timeout 86400 -browserTimeout 86400 -host $$HOSTNAME -port 5556" /opt/bin/entry_point.sh'
+    ports:
+      - "5556"
+      - "9222"
+    networks:
+      - backend
+    volumes:
+      - /dev/shm:/dev/shm
+    depends_on:
+      - hub
+  backend:
+    image: fcmotode/backend:${BACKEND_TAG}
+    volumes:
+      - backend:/var/log
+    ports:
+      - "${BACKEND_SUPERUSER_PORT}:9001"
+      - "${BACKEND_APP_PORT}:5000"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  category:
+    image: fcmotode/category:${CATEGORY_TAG}
+    volumes:
+      - category:/var/log
+    ports:
+      - "${CATEGORY_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  page:
+    image: fcmotode/page:${PAGE_TAG}
+    volumes:
+      - page:/var/log
+    ports:
+      - "${PAGE_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    deploy:
+      restart_policy:
+        condition: any
+    networks:
+      - backend
+    depends_on:
+      - postgres
+  product:
+    image: fcmotode/product:${PRODUCT_TAG}
+    volumes:
+      - product:/var/log
+    ports:
+      - "${PRODUCT_SUPERUSER_PORT}:9001"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - SELENIUM_HUB_URL=${SELENIUM_HUB_URL}
+    networks:
+      - backend
+    depends_on:
+      - postgres
+      - hub
+      - chrome
+  postgres:
+    image: postgres:9.6-alpine
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    deploy:
+      restart_policy:
+        condition: any
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - backend
+  adminer:
+    image: adminer
+    ports:
+      - ${ADMINER_PORT}:8080
+    deploy:
+      restart_policy:
+        condition: any
+    depends_on:
+      - postgres
+    networks:
+      - backend
+  portainer:
+    image: portainer/portainer:latest
+    ports:
+      - "${PORTAINER_PORT}:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer:/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - backend
+  cadvisor:
+    image: google/cadvisor:latest
+    ports:
+      - "${CADVISOR_PORT}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - backend

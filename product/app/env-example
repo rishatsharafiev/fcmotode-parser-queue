@@ -1,0 +1,13 @@
+# product
+PRODUCT_APP_PATH=./product/app
+PRODUCT_LOG_PATH=./
+
+# postgres
+POSTGRES_DB=fcmoto
+POSTGRES_USER=fcmoto
+POSTGRES_PASSWORD=fcmoto
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+
+# selenium
+SELENIUM_HUB_URL=http://localhost:4444/wd/hub
