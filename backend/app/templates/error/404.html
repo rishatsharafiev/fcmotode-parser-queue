@@ -1,0 +1,8 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Страница не найдена - {{ super() }}{% endblock %}
+
+{% block content %}
+  <h2>Страница не найдена</h2>
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary" role="button" aria-pressed="true">Перейти на главную</a>
+{% endblock %}

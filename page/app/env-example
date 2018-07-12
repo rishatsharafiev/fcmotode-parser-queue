@@ -1,0 +1,10 @@
+# page
+PAGE_APP_PATH=./page/app
+PAGE_LOG_PATH=./
+
+# postgres
+POSTGRES_DB=fcmoto
+POSTGRES_USER=fcmoto
+POSTGRES_PASSWORD=fcmoto
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432

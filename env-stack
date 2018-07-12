@@ -1,0 +1,49 @@
+# common
+export NETWORKS_DRIVER=overlay
+export VOLUMES_DRIVER=local
+
+# selenium
+export SELENIUM_HUB_URL=http://fcmoto_hub:4444/wd/hub
+export SELENIUM_HUB_PORT=4444
+export SELENIUM_NODE_CHROME_PORT=5556
+export SELENIUM_NODE_MAX_CONTAINERS=1
+export SELENIUM_NODE_MAX_INSTANCES=1
+export SELENIUM_NODE_MAX_SESSION=1
+
+# backend
+export BACKEND_TAG=latest
+export BACKEND_SUPERUSER_PORT=9001
+export BACKEND_APP_PATH=./backend/app
+export BACKEND_APP_PORT=5000
+
+# category
+export CATEGORY_TAG=latest
+export CATEGORY_SUPERUSER_PORT=9002
+export CATEGORY_APP_PATH=./category/app
+
+# page
+export PAGE_TAG=latest
+export PAGE_SUPERUSER_PORT=9003
+export PAGE_APP_PATH=./page/app
+
+# product
+export PRODUCT_TAG=latest
+export PRODUCT_SUPERUSER_PORT=9004
+export PRODUCT_APP_PATH=./product/app
+
+# postgres
+export POSTGRES_DB=fcmoto
+export POSTGRES_USER=fcmoto
+export POSTGRES_PASSWORD=fcmoto
+export POSTGRES_HOST=fcmoto_postgres
+export POSTGRES_PORT=5432
+
+# adminer
+export ADMINER_PORT=8080
+
+# portainer
+export PORTAINER_PORT=9000
+
+# cadvisor
+export CADVISOR_PORT=8888
+
