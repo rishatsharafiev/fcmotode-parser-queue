@@ -134,7 +134,7 @@ def remove_category(category_id):
 
     return True
 
-def export_webassyst_csv(stream, category_id, gender='', course='', margin=''):
+def export_webassyst_csv(stream, category_id, gender='', course=1, margin=0):
     with psycopg2.connect(dbname=POSTGRES_DB, user=POSTGRES_USER, password=POSTGRES_PASSWORD, host=POSTGRES_HOST, port=POSTGRES_PORT) as connection:
         with connection.cursor() as cursor:
             csv_writer = csv.writer(stream, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL, lineterminator='\n')
@@ -317,9 +317,9 @@ def export_webassyst_csv(stream, category_id, gender='', course='', margin=''):
                     name_url = item[7].replace('"', "'")
                     price_cleaned = item[8] if item[8] else ''
                     if '€' in price_cleaned:
-                        price_cleaned = float(price_cleaned.strip('€'))*float(course)*(100+float(margin))/100
+                        price_cleaned = math.ceil(float(price_cleaned.strip('€'))*float(course)+float(margin))
                     elif 'руб.' in price_cleaned:
-                        price_cleaned = float(price_cleaned.strip('руб.'))*(100+float(margin))/100
+                        price_cleaned = math.ceil(float(price_cleaned.strip('руб.'))+float(margin))
                     url = item[9]
                     available = item[10] if item[10] else ''
                     value = item[11].replace('"', "'") if item[11] else ''
