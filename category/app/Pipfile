@@ -12,7 +12,7 @@ name = "pypi"
 [packages]
 
 python-dotenv = "==0.8.*"
-lxml = "==4.2.*"
+lxml = "==4.6.*"
 requests = "==2.19.*"
 cssselect = "==1.0.*"
 gevent = "==1.3.*"
